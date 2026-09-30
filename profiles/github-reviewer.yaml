@@ -1,0 +1,17 @@
+# Endpointless credential profile for an OPTIONAL GitHub read token (private repos).
+# It defines no endpoints on purpose: the token is only usable where the sandbox
+# policy explicitly binds it (see credential_binding in policies/claude-reviewer.yaml),
+# i.e. the single target repository, never all of github.com.
+id: github-reviewer
+display_name: GitHub Reviewer (read-only token)
+description: Fine-grained PAT with Contents:read / Metadata:read on the target repo only
+category: source_control
+credentials:
+  - name: api_token
+    description: GitHub fine-grained token, read-only, scoped to the target repository
+    env_vars: [GITHUB_TOKEN]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+discovery:
+  credentials: [api_token]
