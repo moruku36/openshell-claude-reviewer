@@ -19,7 +19,7 @@ for a in "$@"; do
 done
 parse_repo "$TARGET"
 
-NAME="reviewer-verify-$(date +%H%M%S)"
+NAME="$(sandbox_name verify)"
 POLICY="$ROOT_DIR/.rendered/$NAME.yaml"
 REPORT="$ROOT_DIR/reports/verification-$(date +%Y%m%d-%H%M%S).md"
 mkdir -p "$ROOT_DIR/reports"

@@ -23,7 +23,7 @@ parse_repo "$TARGET"
 [[ -z "$REF" || "$REF" =~ ^[A-Za-z0-9._/-]+$ ]] || die "invalid --ref"
 
 TS="$(date +%Y%m%d-%H%M%S)"
-NAME="reviewer-$(echo "$REPO" | tr '[:upper:]._' '[:lower:]--' | cut -c1-30)-$TS"
+NAME="$(sandbox_name "$REPO")"
 POLICY="$ROOT_DIR/.rendered/$NAME.yaml"
 OUT="${OUT:-$ROOT_DIR/reports/$OWNER-$REPO-$TS.md}"
 mkdir -p "$(dirname "$OUT")"

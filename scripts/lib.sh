@@ -52,3 +52,10 @@ ensure_secret() {
   fi
   [[ -n "${!var}" ]] || die "$var is empty"
 }
+
+# sandbox_name <label>  -> "rv-<label up to 8 chars>-HHMMSS" (OpenShell limits names to 19 chars)
+sandbox_name() {
+  local label
+  label="$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n' '-' | cut -c1-8 | sed 's/-*$//')"
+  echo "rv-${label:-x}-$(date +%H%M%S)"
+}
