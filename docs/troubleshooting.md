@@ -2,8 +2,10 @@
 
 | Symptom | Fix |
 |---|---|
+| `name exceeds maximum length (N > 19)` | Sandbox names are limited to 19 chars; the scripts use `rv-<label>-HHMMSS` (fixed) |
 | `Cannot reach the OpenShell gateway` | Start Docker Desktop, then `brew services restart openshell`; check `openshell status` |
 | `Docker daemon is not running` | Start Docker Desktop; OpenShell's Docker driver needs Engine 28+ |
+| `ControlSupervisorStartFailed ... failed to connect to OpenShell server` | Docker Desktop: enable *Settings → Resources → Network → Enable host networking* (and apply & restart), make sure Enhanced Container Isolation is off, then `scripts/cleanup.sh` and retry. Per OpenShell's runtime docs, the Docker driver needs host networking so the supervisor can reach the gateway on host loopback; otherwise set `grpc_endpoint` in the gateway config |
 | Sandbox stuck in `Provisioning` | `openshell sandbox get <name>`; a `ConfigurationInvalid` condition means the policy or provider is rejected — fix and it recovers within 300 s |
 | `--from openshell-claude-reviewer:local` not found | The gateway must see local images. Otherwise push the image to a registry you control and set `REVIEWER_IMAGE=<registry>/<image>:<tag>` |
 | Claude cannot reach Anthropic (`403 from proxy`) | `openshell logs <name> --source sandbox \| grep DENIED` shows the binary path that was denied; add that **real** path (not a symlink) to `binaries` in `profiles/claude-code-reviewer.yaml`, then `scripts/setup.sh` |

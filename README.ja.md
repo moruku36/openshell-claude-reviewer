@@ -54,7 +54,7 @@ flowchart TB
 ## 前提
 
 - Apple Silicon Mac（macOS）、Homebrew
-- Docker Desktop（起動済み、Engine 28+）
+- Docker Desktop（起動済み、Engine 28+）。**ホストネットワーキングを有効化**（Settings → Resources → Network → *Enable host networking*）し、Enhanced Container Isolation はオフにする。無効だとSandboxのsupervisorがOpenShellゲートウェイに届かず `ControlSupervisorStartFailed ... failed to connect to OpenShell server` で失敗します。
 - OpenShell（`scripts/setup.sh --install` がNVIDIA公式インストーラを実行）
 - **Anthropic Console のAPIキー**（OpenShellのClaude Providerは`ANTHROPIC_API_KEY`を使用。サブスクリプション認証は非対応）
 - 任意: GitHub fine-grained token（対象リポジトリのみ `Contents: read` + `Metadata: read`。privateリポジトリ用）

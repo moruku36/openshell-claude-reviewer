@@ -57,7 +57,7 @@ Not covered: see [Known limitations](#known-limitations).
 ## Prerequisites
 
 - Apple Silicon Mac (macOS), Homebrew
-- Docker Desktop, running (Engine 28+)
+- Docker Desktop, running (Engine 28+), with **host networking enabled** (Settings → Resources → Network → *Enable host networking*) and Enhanced Container Isolation off. Without host networking the sandbox supervisor cannot reach the OpenShell gateway (`ControlSupervisorStartFailed ... failed to connect to OpenShell server`).
 - OpenShell (installed by `scripts/setup.sh --install` using NVIDIA's official installer)
 - An **Anthropic Console API key** (OpenShell's Claude provider uses `ANTHROPIC_API_KEY`; subscription tokens are not supported)
 - Optional: a GitHub fine-grained token, `Contents: read` + `Metadata: read` on the target repo only (private repos)
