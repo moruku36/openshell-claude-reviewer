@@ -20,15 +20,17 @@ jobs:
       - name: shellcheck
         run: shellcheck -S style scripts/*.sh
       - name: YAML lint
-        run: yamllint -d '{extends: relaxed, rules: {line-length: disable}}' policies profiles .github
-      - name: Policy lint (rendered policy vs documented schema, hostile input rejected)
+        run: |
+          yamllint -d '{extends: relaxed, rules: {line-length: disable}}' policies profiles .github
+      - name: Policy lint
         run: python3 scripts/lint-policy.py
       - name: Secret scan
         run: scripts/scan-secrets.sh
       - name: Docs check
         run: python3 scripts/check-docs.py
       - name: Scripts parse
-        run: for f in scripts/*.sh; do bash -n "$f"; done
+        run: |
+          for f in scripts/*.sh; do bash -n "$f"; done
 
   image:
     runs-on: ubuntu-latest
