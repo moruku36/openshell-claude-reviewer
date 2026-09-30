@@ -6,7 +6,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 need openshell "Run scripts/setup.sh --install"
 ALL=0; [[ "${1:-}" == "--all" ]] && ALL=1
 
-mapfile -t NAMES < <(openshell sandbox list --selector "$SANDBOX_LABEL" | awk 'NR>1 && NF {print $1}')
+# bash 3.2 (macOS default) has no mapfile; build the list with a read loop.
+NAMES=()
+while IFS= read -r n; do [[ -n "$n" ]] && NAMES+=("$n"); done \
+  < <(openshell sandbox list --selector "$SANDBOX_LABEL" | awk 'NR>1 && NF {print $1}')
 if [[ ${#NAMES[@]} -gt 0 ]]; then
   info "Deleting sandboxes: ${NAMES[*]}"
   openshell sandbox delete "${NAMES[@]}"
