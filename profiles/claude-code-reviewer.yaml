@@ -1,0 +1,30 @@
+# Provider profile for the Reviewer's Anthropic access.
+# Derived from NVIDIA/OpenShell providers/claude-code.yaml, narrowed:
+# telemetry hosts (statsig.anthropic.com, sentry.io) are NOT allowed.
+#
+# `binaries` must name the executables in image/Dockerfile. Real paths, not
+# symlinks: the npm global install resolves under /usr/local/lib/node_modules.
+id: claude-code-reviewer
+display_name: Claude Code Reviewer
+description: Anthropic API access for the read-only reviewer sandbox
+category: agent
+inference_capable: true
+credentials:
+  - name: api_key
+    description: Anthropic Console API key (subscription tokens are not supported)
+    env_vars: [ANTHROPIC_API_KEY]
+    required: true
+    auth_style: header
+    header_name: x-api-key
+discovery:
+  credentials: [api_key]
+endpoints:
+  - host: api.anthropic.com
+    port: 443
+    protocol: rest
+    access: read-write
+    enforcement: enforce
+binaries:
+  - /usr/local/bin/claude
+  - /usr/local/bin/node
+  - /usr/local/lib/node_modules/@anthropic-ai/claude-code/**

@@ -1,0 +1,58 @@
+# Sandbox policy for the Claude Code Reviewer (OpenShell policy schema version 1).
+# This is a TEMPLATE: scripts/lib.sh renders @OWNER@ / @REPO@ (validated) and the
+# optional GitHub credential binding before use. Default is deny; everything below
+# is an explicit allow.
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /etc, /opt/reviewer]
+  read_write: [/tmp, /sandbox, /home/reviewer]
+
+landlock:
+  compatibility: hard_requirement   # fail closed if filesystem rules cannot be enforced
+
+process:
+  run_as_user: "1500"
+  run_as_group: "1500"
+
+network_policies:
+  # Anthropic API access comes from the attached claude-code-reviewer provider profile.
+
+  github_git_read:
+    name: github-git-read
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        #@GH_BINDING@credential_binding: { provider: reviewer-github }
+        rules:
+          # clone / fetch: ref discovery (GET) + pack negotiation (POST upload-pack)
+          - allow: { method: GET, path: "/@OWNER@/@REPO@/info/refs" }
+          - allow: { method: GET, path: "/@OWNER@/@REPO@.git/info/refs" }
+          - allow: { method: POST, path: "/@OWNER@/@REPO@/git-upload-pack" }
+          - allow: { method: POST, path: "/@OWNER@/@REPO@.git/git-upload-pack" }
+        deny_rules:
+          # push: advertisement and receive-pack are denied even if a rule above widens.
+          - { method: "*", path: "/**/git-receive-pack" }
+          - { method: GET, path: "/**/info/refs", query: { service: git-receive-pack } }
+    binaries:
+      - path: /usr/bin/git
+
+  github_api_read:
+    name: github-api-read
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        #@GH_BINDING@credential_binding: { provider: reviewer-github }
+        rules:
+          # GET/HEAD only, one repository. POST/PUT/PATCH/DELETE (issues, PRs,
+          # comments, merges, contents writes) have no allow rule -> denied.
+          - allow: { method: GET, path: "/repos/@OWNER@/@REPO@" }
+          - allow: { method: GET, path: "/repos/@OWNER@/@REPO@/**" }
+          - allow: { method: HEAD, path: "/repos/@OWNER@/@REPO@/**" }
+    binaries:
+      - path: /usr/bin/curl

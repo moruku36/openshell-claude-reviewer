@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install linters
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          pip install --quiet yamllint pyyaml
+      - name: shellcheck
+        run: shellcheck -S style scripts/*.sh
+      - name: YAML lint
+        run: yamllint -d '{extends: relaxed, rules: {line-length: disable}}' policies profiles .github
+      - name: Policy lint (rendered policy vs documented schema, hostile input rejected)
+        run: python3 scripts/lint-policy.py
+      - name: Secret scan
+        run: scripts/scan-secrets.sh
+      - name: Docs check
+        run: python3 scripts/check-docs.py
+      - name: Scripts parse
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build reviewer image
+        run: docker build -t openshell-claude-reviewer:ci -f image/Dockerfile .
+      - name: Image sanity
+        run: |
+          docker run --rm openshell-claude-reviewer:ci claude --version
+          docker run --rm openshell-claude-reviewer:ci sh -c 'id -u | grep -qx 1500 && test -f /opt/reviewer/reviewer.md && command -v git'
