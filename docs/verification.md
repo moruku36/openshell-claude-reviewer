@@ -75,3 +75,18 @@ target `moruku36/multi-ai-workflow`, `scripts/verify-security.sh --skip-claude`.
 
 Findings from the first live runs (all fixed): sandbox names are limited to 19 characters;
 Docker Desktop needs host networking; `cleanup.sh` must not use `mapfile` (bash 3.2 on macOS).
+
+## Recorded results: 2026-10-06
+
+An additional local run on Apple Silicon macOS with Docker Desktop and OpenShell 0.1.2 reported
+13/13 isolation checks passing. Claude Code 2.1.285 started. Checks covered target-repository clone,
+fetch and API `GET`; denial of push (dry run), API mutation, another repository, unapproved hosts,
+host paths and `/usr` writes; an opaque dummy credential placeholder; and denial events in OpenShell logs.
+
+This run used only a dummy API-key placeholder. It did **not** make a real Anthropic API request,
+perform an end-to-end code review, or exercise the private-repository token path. Therefore it does
+not establish successful Claude inference or a successful review. The sandbox was deleted after
+the run; Docker Desktop and the OpenShell gateway remained running. No paid API usage was made.
+
+The report records observed checks only; it does not include machine-specific paths, identifiers,
+credentials, or raw logs.

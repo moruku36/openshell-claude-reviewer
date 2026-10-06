@@ -11,7 +11,8 @@ is enforced by policy instead of by a prompt.
 
 > **Status:** policy, scripts, image and docs are linted in CI. The live checks in
 > `scripts/verify-security.sh` must be run on your machine (they need Docker + a gateway);
-> no results are claimed until you record them. See [docs/verification.md](docs/verification.md).
+> recorded live checks are listed in [docs/verification.md](docs/verification.md). The latest run
+> verified sandbox boundaries (13/13 checks); it did not verify Anthropic API access or a real review.
 
 ## Why OpenShell
 

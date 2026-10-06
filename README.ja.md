@@ -10,8 +10,8 @@
 English: [README.md](README.md)
 
 > **ステータス:** ポリシー・スクリプト・イメージ・ドキュメントはCIでlint済み。実機の検証
-> (`scripts/verify-security.sh`) はDockerとゲートウェイが必要なため、手元のMacで実行して結果を記録してください。
-> 実行するまで「検証済み」とは主張しません。[docs/verification.md](docs/verification.md)
+> (`scripts/verify-security.sh`) の記録を[docs/verification.md](docs/verification.md)に掲載しています。
+> 最新の実行ではサンドボックス境界の13項目を確認しましたが、Anthropic API接続や実レビューの成功は確認していません。
 
 ## なぜOpenShellか
 
