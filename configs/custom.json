@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "provider": "custom",
+  "runtime": "native",
+  "command": ["your-reviewed-local-model-cli", "--stdin"]
+}

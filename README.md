@@ -1,5 +1,12 @@
 # openshell-claude-reviewer
 
+> **Windows / multiple providers:** a new Python entry point validates configuration,
+> builds Codex/Claude/custom CLI plans and runs fixed synthetic tests natively on
+> Windows. **Real provider execution is not implemented in this entry point.**
+> Start with [Windows instructions](docs/windows.md), [provider design](docs/provider-design.md)
+> and [verification limits](docs/windows-verification.md). The sections below describe
+> the legacy macOS/Claude workflow, not native Windows OpenShell support.
+
 > **This project does not choose which AI model to use.**
 > **It provides a security execution boundary for Claude Code reviewers.**
 

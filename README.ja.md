@@ -1,5 +1,11 @@
 # openshell-claude-reviewer
 
+> **Windows・複数 AI 対応の現在地:** Python の新しい入口で設定検証、Codex／Claude／任意 CLI の
+> 実行計画、固定の合成テストを Windows ネイティブで利用できます。**新しい入口から実 AI を
+> 起動する機能は未実装です。** [Windows 手順](docs/windows.md)、[設計](docs/provider-design.md)、
+> [検証範囲と制約](docs/windows-verification.md)を参照してください。
+> 以下は従来の macOS・Claude 向け手順です。OpenShell の Windows ネイティブ対応を意味しません。
+
 > **このプロジェクトは、どのAIモデルを使うかを選びません。**
 > **Claude Code レビュアーのための「セキュリティ実行境界」を提供します。**
 

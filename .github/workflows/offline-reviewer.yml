@@ -1,0 +1,29 @@
+name: Offline reviewer
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/initial-openshell-claude-reviewer]
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python: ['3.11', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Offline contract and failure tests
+        run: python -m unittest discover -s tests -v
+      - name: Codex plan (no CLI or credentials required)
+        run: python -m reviewer --config configs/codex.json --dry-run
+      - name: Synthetic review (no AI call)
+        run: python -m reviewer --config configs/synthetic.json --execute
