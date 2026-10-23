@@ -1,5 +1,11 @@
 # Architecture
 
+The [provider planning layer](provider-design.md) now supports native Windows offline
+validation and Codex/Claude/custom argv adapters. Supplied-text execution is implemented
+behind explicit permissions and mock-tested; no real AI call or live isolation test was run.
+The architecture below describes the unchanged legacy macOS/Claude runtime only;
+the former Claude-only scope does not apply to the new offline planning layer.
+
 OpenShell is an **Execution Security Layer** placed *under* task routing. It is not an AI router and
 not a model tier.
 
