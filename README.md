@@ -2,7 +2,8 @@
 
 > **Windows / multiple providers:** a new Python entry point validates configuration,
 > builds Codex/Claude/custom CLI plans and runs fixed synthetic tests natively on
-> Windows. **Real provider execution is not implemented in this entry point.**
+> Windows. **Opt-in supplied-text execution is implemented and mock-tested;
+> real AI calls and OpenShell runtime isolation remain unverified.**
 > Start with [Windows instructions](docs/windows.md), [provider design](docs/provider-design.md)
 > and [verification limits](docs/windows-verification.md). The sections below describe
 > the legacy macOS/Claude workflow, not native Windows OpenShell support.

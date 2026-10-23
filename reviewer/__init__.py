@@ -1,1 +1,1 @@
-"""Offline review planning. No credentials, network, or subprocess execution."""
+"""Offline by default; opt-in supplied-text reviews with no provisioning or login."""

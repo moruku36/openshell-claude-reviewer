@@ -23,6 +23,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Offline contract and failure tests
         run: python -m unittest discover -s tests -v
+      - name: UTF-8 documentation links
+        run: python scripts/check-docs.py
       - name: Codex plan (no CLI or credentials required)
         run: python -m reviewer --config configs/codex.json --dry-run
       - name: Synthetic review (no AI call)

@@ -1,8 +1,9 @@
 # Repository guidance
 
 - Read both READMEs and docs/architecture.md before modifying the reviewer.
-- `python -m reviewer` is an offline planner and fixed synthetic runner. Keep the
-  default offline and preserve fail-closed behavior for every real provider.
+- `python -m reviewer` defaults to offline planning and fixed synthetic fixtures.
+  Real providers require explicit data-transfer, runtime and external-budget
+  acknowledgments. Preserve fail-closed behavior and never add an automatic host fallback.
 - Do not present CLI tool controls as an OpenShell filesystem/network boundary.
 - Verify provider and OpenShell flags against installed help or official docs;
   do not infer native Windows support from build-only CI or roadmap issues.

@@ -1,101 +1,113 @@
-# Windows: reproducible offline workflow
+# Windows workflow and remaining operational steps
 
-Status: Windows-native configuration validation, provider argv planning and a fixed
-synthetic review are implemented. **Real Codex/Claude/custom reviews are not
-implemented by this entry point.** This is an incremental foundation, not a claim
-that OpenShell now runs natively on Windows or that a real review was verified.
+The Python entry point runs natively on Windows with Python 3.11+ and no pip
+dependencies. Config validation, dry-run, synthetic reports and guarded supplied-text
+execution are implemented. Provider execution is mock-tested only: no real AI
+inference or OpenShell isolation test was run.
 
-## Requirements and commands
+## Safe commands without accounts or services
 
-Use an existing Python 3.11+ installation from PowerShell in the repository root.
-No pip dependencies, Docker, WSL, gateway, credentials or provider CLI are needed.
-Obtain this public repository using your already approved GitHub access; this tool
-does not clone repositories, repair connectivity or disable TLS validation.
+From the repository root in PowerShell:
 
 ```powershell
-python --version
 python -m unittest discover -s tests -v
+python scripts/check-docs.py
 python -m reviewer --config configs/codex.json --dry-run
 python -m reviewer --config configs/claude.json --dry-run
 python -m reviewer --config configs/custom.json --dry-run
 python -m reviewer --config configs/synthetic.json --execute
-python -m reviewer --config configs/synthetic.json --execute --out synthetic-review.md
 ```
 
-`--dry-run` is the default. It reads only the selected configuration file, emits a
-JSON plan and does not start any process, read environment variables or write files.
-`--execute` accepts only `synthetic`, which uses a fixed built-in bug and report;
-it does not read a user's repository. `--out` creates a new file exclusively;
-repeat the command with a different path rather than overwriting an earlier report.
-UTF-8 BOM configs, spaces and Japanese characters in config/report paths work.
+Dry-run is the default and reads only its config, even if `--input` is specified.
+It starts no processes, reads no credentials and writes no files. Custom argv are
+omitted from printed plans. Synthetic execution reads no user input and uses a fixed
+fixture; `--out synthetic-review.md` creates a new file without overwriting.
 
-This command deliberately exits 3 and creates no report:
+## Before the first real native review
+
+1. Choose an already installed, trusted native Codex/Claude `.exe`, with existing
+   working authentication. Batch/PowerShell shims are refused. If installation or
+   new login is required, that is a separate operation: this program does neither.
+   `executable` can select the actual `.exe` path.
+2. Decide whether an ordinary host process is acceptable. It is **not** OpenShell
+   isolation: global settings/hooks and normal host access may apply. If enforced
+   confinement is required, use the existing Linux/OpenShell path.
+3. Verify an externally enforced provider/account spending limit. Copy
+   `configs/live-codex.example.json` to a local config and set `budget_usd` to that
+   verified allowance. Example `0.25` is illustrative, not an installed cap or
+   authorization. No hard Codex cost flag is invented. Claude's additional
+   `--max-budget-usd` estimates spend and can overshoot, so an external cap is still
+   required. If no verifiable cap exists, keep using synthetic/dry-run.
+4. Prepare one UTF-8 text file containing only material approved for that provider.
+   Start with a small public or synthetic sample. The program does not discover or
+   export an entire repository. Nonpublic material needs separate explicit permission.
+5. After those checks and permission for the actual call, the operator may run:
 
 ```powershell
-python -m reviewer --config configs/codex.json --execute
+python -m reviewer --config my-live-config.json --execute --input approved-review.txt --out new-review.md --allow-data-transfer --allow-native-execution --confirm-external-budget
 ```
 
-No flag unlocks a real provider, starts WSL or Docker, creates credentials, changes
-network/security settings, or starts/reconfigures services. The legacy `scripts/*.sh`
-workflow remains macOS-oriented; do not run `setup.sh --install` as a Windows fix.
-Historical macOS instructions below the new README notice do not apply to this path.
+This command **starts a provider and may spend money**. It was not run for this
+change. Flags attest to checks the operator has completed; they do not configure
+billing, authenticate or make native execution isolated. Real execution requires a
+new `--out` path. Failures never trigger login, retry, installation or fallback.
+After timeout/uncertainty, check provider state before repeating a call.
+The ordinary Codex/Claude configs omit a budget, so `--execute` alone stays blocked.
 
-## Configuration contract
+## Existing OpenShell environment
 
-| Key | Contract |
+The official [support matrix](https://docs.nvidia.com/openshell/about/support-matrix)
+lists Windows x86_64 through WSL 2 + Docker Desktop as experimental. The
+[native Windows roadmap](https://github.com/NVIDIA/OpenShell/issues/4450) was open
+when checked on 2026-10-23. Build CI/MXC proposals do not establish native runtime
+support. This project does not install, launch or configure Docker/WSL, virtualization,
+networking, gateways or services. Legacy `setup.sh --install` is not a Windows fix.
+
+Use an already working Linux/WSL session with the current OpenShell CLI, a ready
+caller-owned sandbox containing the chosen AI, matching endpoint/binary policy,
+existing credentials and a verified external budget. The legacy Claude-only tuple
+cannot serve Codex unchanged. Prepare those independently under separate operational
+permission if absent.
+
+From that **existing Linux session**, after approving input and verifying the
+complete tuple, adapt `configs/openshell-codex.example.json` and use:
+
+```sh
+python3 -m reviewer --config my-sandbox-config.json --execute --input approved-review.txt --out new-review.md --allow-data-transfer --confirm-external-budget --confirm-sandbox-verified
+```
+
+This executes in the selected running sandbox and leaves it intact. It does not
+create/start/reconfigure/delete resources. Native Windows OpenShell execution is
+refused; no implicit WSL launch or host fallback occurs. Active gateway, policies,
+startup environment and credentials are operator-verified prerequisites, not
+established by a flag. No real sandbox acceptance has been performed here.
+
+## Configuration and exit codes
+
+| Key | Meaning |
 |---|---|
-| `version` | Required integer `1`; booleans rejected |
-| `provider` | Required: `codex`, `claude`, `custom`, `synthetic` |
-| `runtime` | `native` (default) or `openshell`; planning label, not an executor |
-| `model` | Optional explicit CLI model identifier for Codex/Claude only |
-| `command` | Required argv array for custom only; literal arguments, no substitution |
+| `version`, `provider` | Required `1` and `codex` / `claude` / `custom` / `synthetic` |
+| `runtime` | `native` default, or `openshell` |
+| `model` | Optional actual Codex/Claude CLI ID; no guessed default |
+| `executable` | Optional Codex/Claude executable path/name |
+| `command` | Literal argv array for custom only; no substitutions |
+| `timeout_seconds` | Integer 1-600; defaults to 120 |
+| `budget_usd` | Positive external allowance up to 100; required for real execution |
+| `sandbox` | Existing sandbox name for OpenShell |
 
-Unknown/duplicate keys, malformed JSON, configs over 32 KiB, invalid argument
-types and option-shaped model IDs fail validation. No credential fields are
-accepted. Do not paste secrets into command arguments. Custom argv are omitted
-from printed plans to reduce accidental disclosure. The adapter library retains
-literal argv for tests and future reviewed integrations; no shell interprets them.
-
-Model defaults are left to the selected CLI. The app's model label `GPT-6.1 Sol medium`
-is not assumed to be an API/CLI model ID. Choose an actual supported CLI identifier
-only after verifying availability; no inference was performed for this change.
+Unknown/duplicate fields, invalid types and configs over 32 KiB fail validation.
+No credential fields are accepted. UTF-8 BOM and Japanese/space-containing paths
+work. The app label `GPT-6.1 Sol medium` is not assumed to be an API model ID; select
+an actual CLI-supported ID separately.
 
 | Exit | Meaning |
 |---|---|
-| 0 | Valid plan or completed fixed synthetic fixture |
+| 0 | Plan, fixed fixture, or successful provider report |
 | 2 | CLI/config error |
-| 3 | Live provider execution blocked |
-| 4 | Output file cannot be created, including an existing file |
-| 130 | Interrupted |
+| 3 | Permission/prerequisite blocked |
+| 4 | New output file cannot be created or already exists |
+| 5 | Input/provider failure; timeout or remote state may be uncertain |
+| 130 | Interrupted; check any in-flight operation before retrying |
 
-## Native Windows versus Linux runtime
-
-| Capability | Native Windows in this project | Linux/WSL/container dependency |
-|---|---|---|
-| JSON validation, argv adapters, dry-run | Implemented, Python stdlib | None |
-| Fixed synthetic report, failure handling | Implemented | None |
-| Actual Codex/Claude/custom review | Not implemented in new entry point | Future executor needs separate verification |
-| Legacy image and provider profiles | Linux paths and Node/Debian image | Existing Docker/OpenShell workflow |
-| Landlock hard requirement, uid 1500, Linux paths | Not a Windows security boundary | Linux sandbox/kernel |
-| Default-deny proxy and credential injection | No native guarantee claimed | Verified gateway, policy and matching image/profile |
-
-Official NVIDIA [support matrix](https://docs.nvidia.com/openshell/about/support-matrix)
-lists Windows x86_64 via WSL 2 + Docker Desktop as experimental. The official
-[native Windows roadmap](https://github.com/NVIDIA/OpenShell/issues/4450) was open
-when checked on 2026-10-23. Build workflows and MXC proposals alone do not establish
-a supported native runtime. See official [installation](https://docs.nvidia.com/openshell/about/installation)
-for prerequisites; this change does not install or alter them.
-
-## Remaining work for live execution
-
-A live executor must verify a complete provider/image/policy combination, existing
-authentication, data-transfer permission and cost limits. Codex cannot use the
-Anthropic-only image/profile unchanged. Custom CLI arguments do not define safe
-network destinations or credential bindings. Windows-hosted CLI controls also do
-not establish the same boundary as OpenShell's Linux sandbox. An executor must
-never fall back to unrestricted host execution after an isolation failure.
-
-Live execution, provider image/profile changes and gateway provisioning are outside
-this incremental PR. Historical macOS checks do not validate Windows, Codex, custom
-providers, or a new OpenShell version. The next phase needs explicit operational
-authorization at the relevant boundary, not merely a successful synthetic run.
+Source/mock checks do not verify authentication, costs or enforced isolation.
+See [design](provider-design.md) and [verification](windows-verification.md).

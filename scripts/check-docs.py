@@ -9,7 +9,7 @@ errs = []
 for md in ROOT.rglob("*.md"):
     if ".git" in md.parts or "reports" in md.parts:
         continue
-    text = md.read_text()
+    text = md.read_text(encoding="utf-8")
     if text.count("```") % 2:
         errs.append(f"{md.relative_to(ROOT)}: unclosed code fence")
     for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", text):

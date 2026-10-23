@@ -1,60 +1,84 @@
-# Provider adapter design
+# Provider adapter and execution design
 
-## Current implementation
-
-The original architecture intentionally implemented Claude only. This change adds
-an independent, credential-free planning layer that can select Codex, Claude or
-another CLI without editing the legacy Bash scripts or widening their policy.
+The Python layer selects Codex, Claude or another CLI without changing the legacy
+macOS image, policy or provider profiles. Default behavior stays offline.
 
 ```text
-JSON config -> strict validator -> provider adapter -> immutable argv + stdin contract
-                                  -> offline JSON plan (default)
-                                  -> synthetic executor -> fixed fixture report
-                                  -> live executor: blocked (exit 3)
+JSON -> validator -> pure adapter -> argv + stdin contract -> dry-run JSON
+                                -> fixed synthetic executor
+                                -> authorization -> approved text file
+                                   -> native process OR existing OpenShell sandbox
+                                   -> bounded UTF-8 output -> new report
 ```
 
-`reviewer/config.py` owns schema validation, duplicate-key rejection and bounded
-UTF-8 reads. `reviewer/adapters.py` is pure: it accepts validated settings and returns
-an argv tuple and stdin contract. No adapter reads secrets, discovers executables
-or invokes a shell. `reviewer/__main__.py` owns plan serialization, explicit action
-selection, error codes and exclusive report creation. The only implemented executor
-is the built-in synthetic fixture. A plan does not imply executable capability.
-
-This separation permits synthetic contract tests before authorization for any real
-provider call. No SDK dependency, external model, new login, paid inference or
-service is needed to run the tests.
+`config.py` validates bounded UTF-8 JSON and per-provider fields. `adapters.py`
+constructs literal argv without launching processes or expanding templates.
+`execution.py` owns permissions, input limits, executable lookup, transports,
+bounded pipe draining and terminal failure behavior. `__main__.py` owns CLI
+selection, dry-run and report publication.
 
 ## Adapter contracts
 
-| Adapter | Planned command behavior | Verification |
+| Adapter | Behavior | Evidence |
 |---|---|---|
-| Codex | `exec`, read-only sandbox, ephemeral session, stdin `-`; optional model | Installed `codex exec --help` plus official reference, 2026-10-23 |
-| Claude | Print mode, built-in tools disabled, strict empty MCP config and MCP tools disallowed; optional model | Official Claude CLI reference, 2026-10-23; no live invocation |
-| Custom | Operator-supplied literal argv; full prompt on stdin, final report on stdout | Synthetic argv tests only; no claimed provider compatibility |
-| Synthetic | No argv, no process, no input files | Fixed fixture and deterministic report |
+| Codex | `exec --sandbox read-only --ephemeral --skip-git-repo-check`, stdin `-`, optional model/executable | Installed `codex exec --help` and official reference |
+| Claude | Print/text mode, built-in tools disabled, strict empty MCP config, MCP tools disallowed, session persistence disabled | Official CLI reference; source/mock checks only |
+| Custom | Literal argv, prompt on stdin, UTF-8 report on stdout | Mock contract tests; CLI-specific behavior is operator-owned |
+| Synthetic | Fixed input/report without a process | Local/CI fixture tests |
 
-The old Claude `--allowedTools` option controls approval prompts, not the complete
-set of available tools. The new planned adapter uses `--tools ""` with MCP controls
-for a future supplied-text review. These controls still do not prove host-level
-network or filesystem isolation. No native provider execution is enabled here.
+Claude additionally receives `--max-budget-usd` when configured. This estimated-spend
+limit can overshoot. There is no invented equivalent Codex flag. Every live provider
+therefore requires confirmation of an externally enforced budget. `budget_usd`
+records that allowance, not proof it is configured.
 
-Sources: [Codex CLI reference](https://developers.openai.com/codex/cli/reference),
-[Claude CLI reference](https://code.claude.com/docs/en/cli-reference),
-[OpenShell sandbox lifecycle](https://docs.nvidia.com/openshell/how-it-works/sandboxes/overview).
-OpenShell documents `--no-keep` for ephemeral commands, but its current upload/main
-command restrictions mean a future input-staging executor needs its own tested
-lifecycle and cleanup rather than an invented all-in-one invocation.
+Sources checked on 2026-10-23: [Codex CLI](https://developers.openai.com/codex/cli/reference),
+[Claude CLI](https://code.claude.com/docs/en/cli-reference),
+[OpenShell exec](https://docs.nvidia.com/openshell/how-it-works/sandboxes/overview).
+The old Claude `--allowedTools` controls approval prompts rather than complete tool
+availability. CLI tool controls and prompts do not establish an OpenShell-equivalent
+host security boundary.
 
-## Failures and trust
+## Authorization and transports
 
-Invalid config exits before planning. Real execution exits before opening an output
-file. Existing output paths, including symlinks, are rejected by exclusive creation.
-Exception messages do not echo config content. Custom argv are never printed.
-The module has no subprocess or network execution path. There is no hidden environment
-switch, custom-command escape hatch or host fallback to turn a plan into a live call.
+Real execution needs an explicitly selected UTF-8 input, a new output path,
+`--allow-data-transfer`, `budget_usd`, and `--confirm-external-budget`. Native
+execution also requires `--allow-native-execution`. These are operator attestations;
+they do not query billing or grant real-call permission during tests.
 
-The original image, policies and profiles still describe the legacy Claude path.
-They are not reusable for Codex by changing only an executable name. A future live
-adapter requires explicit endpoint/binary scope, reviewed credential binding,
-isolation acceptance, output/timeout handling and cleanup tests. Credential values
-must remain outside plans, command-line arguments, logs and source control.
+Native transport uses `shell=False` in an empty temporary working directory.
+No repository is cloned, mounted or scanned. Windows requires a resolved `.exe`;
+batch/PowerShell shims are refused. The provider still inherits its normal host
+environment, existing authentication, global settings and hooks. It may have broad
+host access: native mode is unsuitable when enforced isolation is required.
+
+OpenShell transport runs from a non-Windows CLI environment against an existing,
+operator-verified sandbox selected by `sandbox`. It additionally requires
+`--confirm-sandbox-verified`. It constructs `sandbox exec -n NAME --no-tty
+--no-login-shell --timeout SECONDS -- ARGV...`, sends stdin and propagates failure.
+It never creates/starts/deletes sandboxes, imports profiles, saves credentials,
+selects gateways, uploads files or alters policies. No native fallback exists.
+`--no-login-shell` does not neutralize existing `BASH_ENV`; verify that environment
+with the image, provider, binaries and policy. Caller-owned sandbox state persists;
+this transport does not claim per-review ephemerality.
+
+## Failure behavior
+
+Authorization precedes input reads or process creation. Input is limited to 256 KiB;
+combined stdout/stderr to 1 MiB. Timeouts are 1-600 seconds, with a 10-second client
+grace period for the OpenShell server-side timeout. Both pipes are drained;
+diagnostics are discarded because they may contain secrets. Success requires zero
+exit status and nonempty valid UTF-8 output. Reports are created exclusively after
+success, with no overwrite of existing files/symlinks. A disk failure can leave an
+incomplete new file and returns failure.
+
+Timeout, interruption, oversized output or incomplete streams cause terminal failure
+and direct-child cleanup. No retries occur. Killing a local CLI does not prove
+descendants, remote commands or in-flight paid requests stopped. Such outcomes are
+explicitly uncertain; verify state before any manual retry.
+
+All provider launches in tests are mocks. Only the fixed Python synthetic fixture
+is launched as a real child. No AI account, credentials, API, Docker, WSL or gateway
+is used. The legacy tuple is preserved. A real Codex OpenShell sandbox needs a
+separately prepared matching image, endpoint/binary policy and credential provider;
+the Anthropic-only legacy image is not silently reused. Authentication, costs,
+native provider behavior and actual sandbox isolation remain acceptance work.

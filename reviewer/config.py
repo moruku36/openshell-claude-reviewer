@@ -1,10 +1,12 @@
 """Strict, credential-free configuration for offline plans."""
 import json
+import math
 import re
 from pathlib import Path
 
 MAX_CONFIG_BYTES = 32 * 1024
-FIELDS = {"version", "provider", "model", "command", "runtime"}
+FIELDS = {"version", "provider", "model", "command", "runtime", "executable",
+          "sandbox", "timeout_seconds", "budget_usd"}
 PROVIDERS = {"codex", "claude", "custom", "synthetic"}
 
 
@@ -51,9 +53,28 @@ def validate(data):
         raise ConfigError("command is supported only for custom")
     if provider == "synthetic" and runtime != "native":
         raise ConfigError("synthetic fixtures run natively without OpenShell")
-    return {"version": 1, "provider": provider, "runtime": runtime,
+    executable = data.get("executable")
+    if "executable" in data and (provider not in {"codex", "claude"} or
+            not isinstance(executable, str) or not executable or len(executable) > 4096 or
+            any(ord(c) < 32 for c in executable) or executable.startswith("-")):
+        raise ConfigError("executable is a nonempty path/name for codex or claude only")
+    sandbox = data.get("sandbox")
+    if "sandbox" in data and (runtime != "openshell" or not isinstance(sandbox, str) or
+                               not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", sandbox)):
+        raise ConfigError("sandbox must be an existing OpenShell sandbox name")
+    timeout = data.get("timeout_seconds", 120)
+    if type(timeout) is not int or not 1 <= timeout <= 600:
+        raise ConfigError("timeout_seconds must be integer 1 to 600")
+    budget = data.get("budget_usd")
+    if "budget_usd" in data and (provider == "synthetic" or type(budget) not in (int, float) or
+            not 0 < budget <= 100 or not math.isfinite(budget)):
+        raise ConfigError("budget_usd must be a finite positive number up to 100 for real providers")
+    return {"version": 1, "provider": provider, "runtime": runtime, "timeout_seconds": timeout,
             **({"model": model} if model is not None else {}),
-            **({"command": command} if command is not None else {})}
+            **({"command": command} if command is not None else {}),
+            **({"executable": executable} if executable is not None else {}),
+            **({"sandbox": sandbox} if sandbox is not None else {}),
+            **({"budget_usd": budget} if budget is not None else {})}
 
 
 def load_config(path):
